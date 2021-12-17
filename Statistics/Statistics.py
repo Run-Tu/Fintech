@@ -1,4 +1,4 @@
-from utils import (
+from lib.openpyxl_utils import (
     get_target_list,
     save_modify_sheet
 )
@@ -27,8 +27,10 @@ row_index_and_Required_Data = list(zip(row_index_list,Date,Total_Load_Size,Mid_T
                                        Mid_Loan_Scale,Corporate_Loan_Size,
                                        Mid_To_Long_Term_Corporate_Loan_Size,Mid_Corporate_Loan_Scale))
 
-# Save Result
-save_modify_sheet(final_sheet_path='../17·21中长期贷款汇总.xlsx',
-                  data_path='../17·21中长期贷款汇总.xlsx',
-                  required_data=row_index_and_Required_Data
-                  )
+
+if __name__ == '__main__':
+    # Save Result
+    save_modify_sheet(final_sheet_path='../17-21中长期贷款汇总.xlsx',
+                    data_path='../17-21中长期贷款汇总.xlsx',
+                    required_data=row_index_and_Required_Data
+                    )
