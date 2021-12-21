@@ -1,5 +1,5 @@
 import pandas as pd
-from openpyxl_utils import get_sheet_object
+from lib.openpyxl_utils import get_sheet_object
 
 def excel_to_df(excel_path,save_path=None):
     """
@@ -35,8 +35,8 @@ def add_features(df):
     df['year'] = df['date'].apply(lambda x: x[:4]).astype('int32')
     df['month'] = df['date'].apply(lambda x: x[6] if x[5]=='0' else x[5:7]).astype('int32')
     df['day'] = df['date'].apply(lambda x: x[-3:-1]).astype('int32')
-    df['First_half_year'] = df['year'].apply(lambda x: 1 if x in [1,2,3,4,5,6] else 0)
-    df['Second_half_year'] = df['year'].apply(lambda x: 1 if x in [7,8,9,10,11,12] else 0)
+    df['First_half_year'] = df['month'].apply(lambda x: 1 if x in [1,2,3,4,5,6] else 0)
+    df['Second_half_year'] = df['month'].apply(lambda x: 1 if x in [7,8,9,10,11,12] else 0)
     quarterly_map = {1:1,2:1,3:1,4:2,5:2,6:2,7:3,8:3,9:3,10:4,11:4,12:4}
     df['Quarterly'] = df['month'].map(quarterly_map)
 

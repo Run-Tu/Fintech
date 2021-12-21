@@ -75,11 +75,9 @@ def get_target_list(data_path_list):
         Mid_To_Long_Term_Total_Load_Size.append(Mid_To_Long_Term_Total_Load_Size_target)
         Corporate_Loan_Size.append(Corporate_Loan_Scale_target)
         Mid_To_Long_Term_Corporate_Loan_Size.append(Mid_To_Long_Term_Corporate_Loan_Scale_target)
-        Mid_Loan_Scale = ['{:%}'.format(mid_size/total_size) 
-                           for mid_size,total_size 
+        Mid_Loan_Scale = [(mid_size/total_size) for mid_size,total_size 
                            in zip(Mid_To_Long_Term_Total_Load_Size,Total_Load_Size)]
-        Mid_Corporate_Loan_Scale = ['{:%}'.format(mid_com_size/total_com_size) 
-                                    for mid_com_size,total_com_size
+        Mid_Corporate_Loan_Scale = [(mid_com_size/total_com_size) for mid_com_size,total_com_size
                                     in zip(Mid_To_Long_Term_Corporate_Loan_Size,Corporate_Loan_Size)]
 
     return Date,Total_Load_Size, Mid_To_Long_Term_Total_Load_Size, \
