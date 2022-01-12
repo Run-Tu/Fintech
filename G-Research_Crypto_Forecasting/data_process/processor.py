@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 
 pd.options.mode.chained_assignment = None
-FEATURES_COL = ["Asset_ID","Count","Open","High","Low","Close","Volume","VWAP","datatime"]
+FEATURES_COL = ["Asset_ID","Count","Open","High","Low","Close","Volume","VWAP","datetime"]
 
 def get_train_and_valid_df(path, rows):
     """
@@ -22,7 +22,7 @@ def get_train_and_valid_df(path, rows):
         df_train = pd.read_csv(path, nrows=rows)
         df_train.dropna(axis=0, inplace=True)
         df_train.sort_values("timestamp", inplace=True) # 将时间戳排序，需要按时间划分时间序列数据集
-        df_train['datatime'] = pd.to_datetime(df_train['timestamp'], units='s') # 转换时间戳，单位s
+        df_train['datatime'] = pd.to_datetime(df_train['timestamp'], unit='s') # 转换时间戳，单位s
 
         return df_train
 
@@ -38,7 +38,7 @@ def get_train_and_valid_df(path, rows):
                 upper_shadow:当天最高值 - 开盘和收盘价的最大值
             """
 
-            return df['High'] - np.maxinum(df['close'],df['open'])
+            return df['High'] - np.maximum(df['Close'],df['Open'])
         
 
         def lower_shadow(df):
@@ -46,7 +46,7 @@ def get_train_and_valid_df(path, rows):
                 lower_shadow:开盘和收盘价格的最低值 - 当天最低值
             """
 
-            return np.minimum(df['close'],df['open']) - df['low']
+            return np.minimum(df['Close'],df['Open']) - df['Low']
         
 
         def log_return(series, periods=1):
@@ -84,7 +84,7 @@ def get_train_and_valid_df(path, rows):
                 reduce machine memory
             """
             for col in df.columns:
-                if col != 'datetime':
+                if df[col].dtype == 'float64':
                     df[col] = df[col].astype('float32')
 
             return df
@@ -93,9 +93,11 @@ def get_train_and_valid_df(path, rows):
 
 
     def prepare_split(df):
-
-        train_df = df[df['datetime'] <= '2018-06-03 00:00:00']
-        valid_df = df[df['datetime']  > '2018-06-03 00:00:00']
+        """
+            本次采用datetime字段进行数据集的划分,普通数据集采用index划分
+        """
+        train_df = df[df['datetime'] <= '2018-01-01 02:37:00']
+        valid_df = df[df['datetime']  > '2018-01-01 02:37:00']
 
         print(f"Training data size: {train_df.shape}",
             f"Validation data size: {valid_df.shape}")

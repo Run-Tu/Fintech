@@ -33,7 +33,7 @@ FEATURES      = ["Asset_ID","Count","Open","High","Low","Close",
 DATALOADER_PARAMS = {
                 'batch_size':6,
                 'shuffle':False,
-                'drop_last':False,
+                'drop_last':True,
                 'num_workers':2
               }
 params = {

@@ -31,7 +31,7 @@ class Trainner():
             'opt_state': opt_state
         }
 
-        torch.save(checkpoint, "../checkpoint/model_state.pt")
+        torch.save(checkpoint, "./models/checkpoint/model_state.pt")
     
 
     def load_checkpoint(self,path, model, optimizer):
@@ -63,6 +63,7 @@ class Trainner():
             # Initialize hidden and cell states with dimension:
             # (num_layers * num_directions, batch, hidden_size)
             states = model.init_hidden_states(batch_size, device)
+            print("states size is", states[0].size())
             running_training_loss = 0.0
         
             # Training
@@ -81,11 +82,15 @@ class Trainner():
                     optimizer.zero_grad()
                     
                     # Make prediction
+                    # 训练时要将drop_last设置为True,否则最后一个batch样本数量不够,维度对不上
+                    # 参考:https://blog.csdn.net/weixin_43935696/article/details/118970831
                     output, states = model(x_batch, states)
 
                     # Calculate loss
                     loss = criterion(output[:, -1, :], y_batch)
-                    loss.backward()
+                    # 模型有两个输出,backward时需要设置retain_graph参数
+                    # 参考:https://blog.csdn.net/weixin_44058333/article/details/99701876
+                    loss.backward(retain_graph=True)
                     running_training_loss += loss.item()
             
             # Average loss across timesteps
@@ -109,8 +114,8 @@ class Trainner():
                         # validation_states = [state for state in validation_states] # 保持梯度反向传播
                         output, validation_states = model(x_batch, validation_states)
                         # DEBUG 记得查看output的shape
-                        validation_losses = criterion(output[:, -1, :], y_batch)
-                        running_validation_loss += validation_losses.item()
+                        validation_loss = criterion(output[:, -1, :], y_batch)
+                        running_validation_loss += validation_loss.item()
                 
             validation_losses.append(running_validation_loss / len(validation_dl))
             # Reset to training mode
