@@ -7,9 +7,6 @@ class CryptoDataset(Dataset):
     """
 
     def __init__(self, csv_file, seq_length, features, target):
-        """
-            Args:
-        """
         self.csv_file = csv_file
         self.seq_length = seq_length
         self.features = features

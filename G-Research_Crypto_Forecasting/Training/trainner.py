@@ -1,24 +1,9 @@
 import torch
-import torch.nn as nn
-import torch.optim as optim
-
-from torch.utils import data
-from torch.utils.data import Dataset, DataLoader
-from torch.nn import functional as F
-from torchvision import datasets, models, transforms
-import io
-import json
-import time
-import requests
-import functools
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
-
 import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
-from sklearn.model_selection import train_test_split
-
+from tqdm import tqdm
+# 忽略处理数据帧切片时的chained_assignment警告(参考：https://stackoverflow.com/questions/37841525/correct-way-to-set-value-on-a-slice-in-pandas)
 pd.options.mode.chained_assignment = None
 
 
@@ -60,16 +45,13 @@ class Trainner():
         return model, optimizer, epoch, min_val_loss
 
 
-    def training(self,model, batch_size, epochs, training_dl, validation_dl,criterion, optimizer,validate_every=2):
+    def training(self, model, batch_size, device, epochs, training_dl, validation_dl, criterion, optimizer, validate_every=2):
         """
             batch_size参数传递问题？
             参数：
             validate_every：每x个epoch验证一次loss
+            可以尝试通过字典传参**params
         """
-        # 是否可以将device设置为全局变量？简化每次调用
-        use_cuda = torch.cuda.is_available()
-        device = torch.device("cuda:0" if use_cuda else "cpu")
-
         training_losses = []
         validation_losses = []
         min_validation_loss = np.inf
@@ -80,19 +62,23 @@ class Trainner():
         for epoch in tqdm(range(epochs)):
             # Initialize hidden and cell states with dimension:
             # (num_layers * num_directions, batch, hidden_size)
-            states = model.init_hidden_states(batch_size)
+            states = model.init_hidden_states(batch_size, device)
             running_training_loss = 0.0
         
             # Training
-            for idx, (x_batch, y_batch) in enumerate(training_dl):
+            for _ , (x_batch, y_batch) in enumerate(training_dl):
                     # Convert to Tensors
                     x_batch = x_batch.float().to(device)
                     y_batch = y_batch.float().to(device)
 
                     # Truncated Backpropagation
-                    states = [state.detach() for state in states]
+                    """
+                        detach()用于阻断反向传播,为什么要阻断反向传播？
+                    """
+                    # states = [state.detach() for state in states]
+                    states = [state for state in states] # 不阻断试一下
 
-                    optimizer.zero.grad()
+                    optimizer.zero_grad()
                     
                     # Make prediction
                     output, states = model(x_batch, states)
@@ -100,7 +86,7 @@ class Trainner():
                     # Calculate loss
                     loss = criterion(output[:, -1, :], y_batch)
                     loss.backward()
-                    running_training_loss += loss
+                    running_training_loss += loss.item()
             
             # Average loss across timesteps
             training_losses.append(running_training_loss / len(training_dl))
@@ -109,15 +95,53 @@ class Trainner():
                 # Set to eval mode
                 model.eval()
                 # 这里为什么在验证的时候做了一个参数初始化？
-                validation_states = model.init_hidden_states(batch_size)
+                # validation_states = states
+                validation_states = model.init_hidden_states(batch_size, device)
                 running_validation_loss = 0.0
 
-                for idx, (x_batch, y_batch) in enumerate(validation_dl):
+                for _ , (x_batch, y_batch) in enumerate(validation_dl):
                         # Convert to Tensors
                         x_batch = x_batch.float().to(device)
                         y_batch = y_batch.float().to(device)
-                        # 今天先写到这2022/1/5
+
+                        # Truncated Backpropagation
                         validation_states = [state.detach() for state in validation_states]
+                        # validation_states = [state for state in validation_states] # 保持梯度反向传播
+                        output, validation_states = model(x_batch, validation_states)
+                        # DEBUG 记得查看output的shape
+                        validation_losses = criterion(output[:, -1, :], y_batch)
+                        running_validation_loss += validation_losses.item()
+                
+            validation_losses.append(running_validation_loss / len(validation_dl))
+            # Reset to training mode
+            model.train()
+
+            is_best = running_validation_loss / len(validation_dl) < min_validation_loss
+
+            if is_best:
+                min_validation_loss = running_validation_loss / len(validation_dl)
+                self.save_checkpoint(
+                                     epoch+1, 
+                                     min_validation_loss, 
+                                     model.state_dict(),
+                                     optimizer.state_dict()  
+                                    )  
+            
+            # Visualize loss
+            epoch_count = range(1, len(training_losses) + 1)
+            plt.plot(epoch_count, training_losses, 'r--')
+            plt.legend(['Training Loss'])
+            plt.xlabel('Epoch')
+            plt.ylabel('Loss')
+            plt.show()
+
+            val_epoch_count = range(1, len(validation_losses) + 1)
+            plt.plot(val_epoch_count, validation_losses, 'b--')
+            plt.legend(['Validation loss'])
+            plt.xlabel('Epoch')
+            plt.ylabel('Loss')
+            plt.show()
+
 
 
 
