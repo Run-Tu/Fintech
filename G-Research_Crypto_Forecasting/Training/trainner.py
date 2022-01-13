@@ -59,6 +59,26 @@ class Trainner():
         # set to train mode
         model.train()
 
+        def plotting_loss(training_losses=None, validation_losses=None):
+            """
+                plotting train | validtation loss
+            """
+            if training_losses:
+                epoch_count = range(1, len(training_losses)+1)
+                plt.plot(epoch_count, training_losses, 'r--')
+                plt.title(['Training Loss'])
+                plt.xlabel('Epoch')
+                plt.ylabel('Loss')
+                plt.show()
+            if validation_losses:
+                epoch_count = range(1, len(validation_losses)+1)
+                plt.plot(epoch_count, validation_losses, 'b--')
+                plt.title(['Validation Loss'])
+                plt.xlabel('Epoch')
+                plt.ylabel('Loss')
+                plt.show()
+
+
         for epoch in tqdm(range(epochs)):
             # Initialize hidden and cell states with dimension:
             # (num_layers * num_directions, batch, hidden_size)
@@ -100,8 +120,8 @@ class Trainner():
                 # Set to eval mode
                 model.eval()
                 # 这里为什么在验证的时候做了一个参数初始化？
-                # validation_states = states
-                validation_states = model.init_hidden_states(batch_size, device)
+                validation_states = states # 沿用训练时的states参数
+                # validation_states = model.init_hidden_states(batch_size, device)
                 running_validation_loss = 0.0
 
                 for _ , (x_batch, y_batch) in enumerate(validation_dl):
@@ -110,7 +130,7 @@ class Trainner():
                         y_batch = y_batch.float().to(device)
 
                         # Truncated Backpropagation
-                        validation_states = [state.detach() for state in validation_states]
+                        validation_states = [state.detach() for state in validation_states] # 验证集不让反向传播
                         # validation_states = [state for state in validation_states] # 保持梯度反向传播
                         output, validation_states = model(x_batch, validation_states)
                         # DEBUG 记得查看output的shape
@@ -118,7 +138,7 @@ class Trainner():
                         running_validation_loss += validation_loss.item()
                 
             validation_losses.append(running_validation_loss / len(validation_dl))
-            # Reset to training mode
+            # Reset to training model
             model.train()
 
             is_best = running_validation_loss / len(validation_dl) < min_validation_loss
@@ -133,21 +153,5 @@ class Trainner():
                                     )  
             
             # Visualize loss
-            epoch_count = range(1, len(training_losses) + 1)
-            plt.plot(epoch_count, training_losses, 'r--')
-            plt.legend(['Training Loss'])
-            plt.xlabel('Epoch')
-            plt.ylabel('Loss')
-            plt.show()
-
-            val_epoch_count = range(1, len(validation_losses) + 1)
-            plt.plot(val_epoch_count, validation_losses, 'b--')
-            plt.legend(['Validation loss'])
-            plt.xlabel('Epoch')
-            plt.ylabel('Loss')
-            plt.show()
-
-
-
-
-
+            plotting_loss(training_losses)
+            plotting_loss(validation_losses)

@@ -22,9 +22,8 @@ class LSTM(nn.Module):
     
     def init_hidden_states(self, batch_size, device):
         """
-            LSTM的h层和c层的shape
-            h和c是一个shape。2层每层是(batch_size * hidden_size)
-            双向的话每一层有两个方向,所以是2层每层是(2, batch_size * hidden_size),一共就是(4, batch_size * hidden_size)
+            初始化LSTM的h层和c层的参数
+            h和c是一个shape,(num_layers*direction, batch_size, hidden_size)
         """
         state_dim = (self.num_layers * self.directions, batch_size, self.hidden_size)
 

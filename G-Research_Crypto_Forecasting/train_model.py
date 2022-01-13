@@ -1,3 +1,10 @@
+"""
+    1、缺少log日志管理模块
+    2、缺少predict预测模块
+    3、DEVICE可在需要的时候添加if-else判断条件
+    4、调研early-stopping
+"""
+import argparse
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -12,81 +19,85 @@ from DataSet.CryptoDataset import CryptoDataset
 USE_CUDA = torch.cuda.is_available()
 DEVICE = torch.device("cuda:0" if USE_CUDA else "cpu")
 
-############
-EPOCHS        = 10
-DROPOUT       = 0.2
-DIRECTIONS    = 1
-NUM_LAYERS    = 2
-BATCH_SIZE    = 6
-OUTPUT_SIZE   = 1
-SEQ_LENGTH    = 60 # 时间戳单位是s，捕捉60s的信息
-NUM_FEATURES  = 12 # 特征数量可适当加特征
-HIDDEN_SIZE   = 64
-LEARNING_RATE = 0.0001
-# h和c的shape(num_layers, batch_size, hidden_size)
-STATE_DIM     = NUM_LAYERS * DIRECTIONS, BATCH_SIZE, HIDDEN_SIZE
-TARGET        = "target"
-FEATURES      = ["Asset_ID","Count","Open","High","Low","Close",
-                 "Volume","VWAP","up_shadow","low_shadow",
-                 "five_min_log_return","abs_one_min_log_return"]
-############
-DATALOADER_PARAMS = {
-                'batch_size':6,
-                'shuffle':False,
-                'drop_last':True,
-                'num_workers':2
-              }
-params = {
-            'epoch':10 ,
-            'dropout':0.2 ,
-            'directions':1 ,
-            'num_layers':2 ,
-            'batch_sie':6
-            }
+def get_train_and_valid_dl(args):
+        """
+            Return Train and Validation Dataloader object
+        """
+        train_df, valid_df = get_train_and_valid_df('./data/train.csv', rows=1800)
+        features = ["Asset_ID","Count","Open","High","Low","Close",
+                     "Volume","VWAP","up_shadow","low_shadow",
+                     "five_min_log_return","abs_one_min_log_return"]
+        dataloader_params = {
+                              'epoch':args.epoch,
+                              'dropout':args.dropout,
+                              'directions':args.directions,
+                              'num_layers':args.num_layers,
+                              'batch_size':args.batch_size
+                            }
+        training_ds = CryptoDataset(train_df, 
+                                    seq_length=args.seq_length, 
+                                    features=features, 
+                                    target=args.target)
+        training_dl = DataLoader(training_ds, **dataloader_params)
+
+        validation_ds = CryptoDataset(valid_df, 
+                                      seq_length=args.seq_length, 
+                                      features=features, 
+                                      target=args.target)
+        validation_dl = DataLoader(validation_ds, **dataloader_params)
+        
+        return training_dl, validation_dl
 
 
-if __name__ == '__main__':
-    # step1:获取处理好的数据集
-    """
-        step1可封装，返回training_dl 和 validation_dl
-    """
-    train_df, valid_df = get_train_and_valid_df('./data/train.csv', rows=1800)
-    training_ds = CryptoDataset(train_df, seq_length=6, features=FEATURES, target="target")
-    training_dl = DataLoader(training_ds, **DATALOADER_PARAMS)
-
-    validation_ds = CryptoDataset(valid_df, seq_length=6, features=FEATURES, target='target')
-    validation_dl = DataLoader(validation_ds, **DATALOADER_PARAMS)
-    # step2:利用封装好的Trainner类训练数据
-    """
-        参数可参考ccks的方式进行整理
-    """
-    trainer = Trainner()
+def main(args):
+    training_dl, validation_dl = get_train_and_valid_dl(args)
     LSTM_model = LSTM(
-                    input_size = NUM_FEATURES, # LSTM input_size即num_features特征维度
-                    hidden_size = HIDDEN_SIZE,
-                    num_layers = NUM_LAYERS,
-                    output_size = OUTPUT_SIZE,
-                    dropout_prob = DROPOUT
+                    input_size = args.input_size, # LSTM input_size即num_features特征维度
+                    hidden_size = args.hidden_size,
+                    num_layers = args.num_layers,
+                    output_size = args.output_size,
+                    dropout_prob = args.dropout
                     ).to(DEVICE)
+    trainer = Trainner()
+    optimizer = optim.AdamW(LSTM_model.linear.parameters(), lr=args.learning_rate, weight_decay=0.01)
     trainer.training(
                       model = LSTM_model, 
-                      batch_size = BATCH_SIZE,
+                      batch_size = args.batch_size,
                       device = DEVICE,
-                      epochs = EPOCHS,
+                      epochs = args.epoch,
                       training_dl = training_dl,
                       validation_dl = validation_dl,
                       criterion = nn.MSELoss(),
                       # AdamW拿模型参数的时候为什么model.linear.parameters()?
-                      optimizer = optim.AdamW(LSTM_model.linear.parameters(), lr=LEARNING_RATE, weight_decay=0.01)
+                      optimizer = optimizer
                       )
-    # step3:加载训练好的模型并预测
-    """
-        load_checkpoint传入的model如果修改参数会报什么错？
-    """
-    path = './models/checkpoint/model_state.pt'
-    model, optimizer, start_epoch, valid_loss_min = trainer.load_checkpoint(path, LSTM_model, optimizer)
-    print("model = ", model)
-    print("optimizer = ", optimizer)
-    print("start_epoch = ", start_epoch)
-    print("valid_loss_min = ", valid_loss_min)
-    print("valid_loss_min = {:.6f}".format(valid_loss_min))
+
+    return
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--learning_rate', type=float, default=0.001)
+    parser.add_argument('--batch_size', type=int, default=6)
+    parser.add_argument('--epoch', type=int, default=2)
+    parser.add_argument('--seq_length', type=int, default=60)
+    parser.add_argument('--num_layers', type=int, default=2,
+                        help='number of LSTM hidden layers.')
+    parser.add_argument('--input_size', type=int, default=12,
+                        help='number of features in the data.')
+    parser.add_argument('--hidden_size', type=int, default=64,
+                        help='LSTM hidden layer size')
+    parser.add_argument('--output_size', type=int, default=1,
+                        help='LSTM hidden layer output size')
+    parser.add_argument('--dropout', type=float, default=0.2)
+    parser.add_argument('--directions', type=int, default=1)
+    parser.add_argument('--shuffle', type=bool, default=False,
+                        help='If shuffle torch DataLoader batch_size')
+    parser.add_argument('--drop_last', type=bool, default=True,
+                        help='Drop the last incomplete batch')
+    parser.add_argument('--num_workers', type=int, default=2,
+                        help='Num_worker to load torch Dataloader')
+    parser.add_argument('--target', type=str, default='target',
+                        help='The target used to create the dataset')
+    args = parser.parse_args()
+    main(args)
