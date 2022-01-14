@@ -4,16 +4,15 @@ import torch.nn as nn
 
 class LSTM(nn.Module):
     """
-        LSTM Net可视化https://zhuanlan.zhihu.com/p/139617364(可反复观看)
+        LSTM Net可视化https://zhuanlan.zhihu.com/p/139617364
     """
-
     def __init__(self, input_size, hidden_size, num_layers, output_size, dropout_prob, directions=1):
         super(LSTM, self).__init__()
 
         self.num_layers = num_layers
         self.input_size = input_size
         self.hidden_size = hidden_size
-        self.directions = directions # 单向lstm
+        self.directions = directions
 
         self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True, dropout=dropout_prob)
         self.dropout = nn.Dropout(dropout_prob)

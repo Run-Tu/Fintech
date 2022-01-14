@@ -3,9 +3,8 @@ from torch.utils.data import Dataset
 
 class CryptoDataset(Dataset):
     """
-        Time Series dataset
+        Create time Series dataset
     """
-
     def __init__(self, csv_file, seq_length, features, target):
         self.csv_file = csv_file
         self.seq_length = seq_length
@@ -13,7 +12,7 @@ class CryptoDataset(Dataset):
         self.data_length = len(csv_file)
         self.target = target
 
-        self.metrics = self.create_xy_pairs()
+        self.time_series_data = self.create_xy_pairs()
 
 
     def create_xy_pairs(self):
@@ -35,7 +34,7 @@ class CryptoDataset(Dataset):
             实现抽象类需要重写__len__方法
         """
 
-        return len(self.metrics)
+        return len(self.time_series_data)
 
 
     def __getitem__(self, idx):
@@ -44,4 +43,5 @@ class CryptoDataset(Dataset):
             实现抽象类需要重写__getitem__方法
         """
 
-        return self.metrics[idx]
+        return self.time_series_data[idx]
+

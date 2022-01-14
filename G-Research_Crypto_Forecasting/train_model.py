@@ -1,14 +1,11 @@
 """
-    1、缺少log日志管理模块
+    1、调研early-stopping
     2、缺少predict预测模块
-    3、DEVICE可在需要的时候添加if-else判断条件
-    4、调研early-stopping
 """
 import argparse
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.optim import optimizer
 from torch.utils.data.dataloader import DataLoader
 from data_process.processor import get_train_and_valid_df
 from Training.trainner import Trainner
@@ -28,11 +25,10 @@ def get_train_and_valid_dl(args):
                      "Volume","VWAP","up_shadow","low_shadow",
                      "five_min_log_return","abs_one_min_log_return"]
         dataloader_params = {
-                              'epoch':args.epoch,
-                              'dropout':args.dropout,
-                              'directions':args.directions,
-                              'num_layers':args.num_layers,
-                              'batch_size':args.batch_size
+                              'batch_size' : args.batch_size,
+                              'shuffle' : False,
+                              'drop_last' : True,
+                              'num_workers' : 2 
                             }
         training_ds = CryptoDataset(train_df, 
                                     seq_length=args.seq_length, 

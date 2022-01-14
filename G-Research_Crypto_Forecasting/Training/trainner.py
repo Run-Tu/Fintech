@@ -1,3 +1,5 @@
+import datetime
+import logging
 import torch
 import numpy as np
 import pandas as pd
@@ -5,6 +7,10 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 # 忽略处理数据帧切片时的chained_assignment警告(参考：https://stackoverflow.com/questions/37841525/correct-way-to-set-value-on-a-slice-in-pandas)
 pd.options.mode.chained_assignment = None
+TODAY = datetime.date.today()
+LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
+DATE_FORMAT = "%Y/%m/%d %H:%M:%S %p"
+logging.basicConfig(filename=f"./output/{TODAY}.log", level=logging.DEBUG, format=LOG_FORMAT, datefmt=DATE_FORMAT)
 
 
 class Trainner():
@@ -46,17 +52,11 @@ class Trainner():
 
 
     def training(self, model, batch_size, device, epochs, training_dl, validation_dl, criterion, optimizer, validate_every=2):
-        """
-            batch_size参数传递问题？
-            参数：
-            validate_every：每x个epoch验证一次loss
-            可以尝试通过字典传参**params
-        """
         training_losses = []
         validation_losses = []
         min_validation_loss = np.inf
 
-        # set to train mode
+        # 模型中有BN层(Batch Normalization)和Dropout,需要在训练时添加model.train()
         model.train()
 
         def plotting_loss(training_losses=None, validation_losses=None):
@@ -83,7 +83,6 @@ class Trainner():
             # Initialize hidden and cell states with dimension:
             # (num_layers * num_directions, batch, hidden_size)
             states = model.init_hidden_states(batch_size, device)
-            print("states size is", states[0].size())
             running_training_loss = 0.0
         
             # Training
@@ -105,14 +104,17 @@ class Trainner():
                     # 训练时要将drop_last设置为True,否则最后一个batch样本数量不够,维度对不上
                     # 参考:https://blog.csdn.net/weixin_43935696/article/details/118970831
                     output, states = model(x_batch, states)
-
+                    logging.debug(f"current batch output is {output}")
+                    logging.debug(output[0])
+                    logging.debug(output[1])
+                    logging.debug(output[2])
                     # Calculate loss
                     loss = criterion(output[:, -1, :], y_batch)
                     # 模型有两个输出,backward时需要设置retain_graph参数
                     # 参考:https://blog.csdn.net/weixin_44058333/article/details/99701876
                     loss.backward(retain_graph=True)
                     running_training_loss += loss.item()
-            
+            logging.info(f"current epoch training loss is {running_training_loss}")
             # Average loss across timesteps
             training_losses.append(running_training_loss / len(training_dl))
 
@@ -136,10 +138,8 @@ class Trainner():
                         # DEBUG 记得查看output的shape
                         validation_loss = criterion(output[:, -1, :], y_batch)
                         running_validation_loss += validation_loss.item()
-                
+            logging.info(f"current validation")
             validation_losses.append(running_validation_loss / len(validation_dl))
-            # Reset to training model
-            model.train()
 
             is_best = running_validation_loss / len(validation_dl) < min_validation_loss
 
@@ -152,6 +152,6 @@ class Trainner():
                                      optimizer.state_dict()  
                                     )  
             
-            # Visualize loss
-            plotting_loss(training_losses)
-            plotting_loss(validation_losses)
+        # Visualize loss
+        plotting_loss(training_losses)
+        plotting_loss(validation_losses)

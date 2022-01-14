@@ -55,7 +55,6 @@ def get_train_and_valid_df(path, rows):
 
 
         def fill_nan_inf(df):
-
             df = df.fillna(0) # fillna
             df = df.replace([np.inf, -np.inf], 0) # fillinf
 
