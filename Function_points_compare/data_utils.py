@@ -1,17 +1,13 @@
 import os
-import json
 import datetime
-import logging
 import pandas as pd
+from compare_module.compare import Compare
 from collections import defaultdict
+from log import get_logger
 
 # logging
 TODAY = datetime.date.today()
-LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
-DATE_FORMAT = "%Y/%m/%d %H:%M:%S %P"
-if not os.path.exists("./logs"):
-    os.mkdirs("./logs")
-logging.basicConfig(filename=f"./logs/{TODAY}.log", level=logging.DEBUG, format=LOG_FORMAT, datefmt=DATE_FORMAT)
+logger = get_logger(name='FunctionPoint_Compare', log_file=f"./logs/{TODAY}.log")
 
 
 def read_work_book(path:str):
@@ -31,9 +27,9 @@ def read_work_book(path:str):
         if "规模估算" in sheet_names:
             workbook = pd.read_excel(path, sheet_name="规模估算", engine="openpyxl")
     except ValueError:
-        logging.info(f"excel读取异常,sheet页中没有规模估算-技术确认或规模估算,错误数据路径{path}")
+        logger.info(f"excel读取异常,sheet页中没有规模估算-技术确认或规模估算,错误数据路径{path}")
     except Exception as e:
-        logging.info(f"错误信息是{e},错误数据路径{path}")
+        logger.info(f"错误信息是{e},错误数据路径{path}")
     
     return workbook
 
@@ -63,7 +59,8 @@ def process_excel_data(workbook):
         workbook.dropna(inplace=True, subset=subset_without_systemName)
     workbook = workbook.iloc[1:,:].reset_index(drop=True)
 
-    system = system_info = []
+    system = []
+    system_info = []
     if "系统名称" in workbook_columns:
         for _, row in workbook.iterrows():
             system.append(row["系统名称"])
@@ -87,7 +84,7 @@ def process_excel_data(workbook):
     return system, system_info
 
 
-def get_systemFunctionInfo_map(data_path:list):
+def get_systemFunctionInfo_map(data_path_lst:list, path:str):
     """Read All Excel Data
 
     Args:
@@ -98,24 +95,20 @@ def get_systemFunctionInfo_map(data_path:list):
     """
     _dict = defaultdict(list)
 
-    for data in data_path:
-        workbook = read_work_book(os.path.join("./original_data/", data))
+    for data_path in data_path_lst:
+        workbook = read_work_book(os.path.join(path, data_path))
         all_system, all_system_info = process_excel_data(workbook)
-        logging.info(f"all_system is {all_system} all_system_info is {all_system_info}")
         for system, system_info in zip(all_system, all_system_info):
-            logging.info(f"system is {system} system_info is {system_info}")
             _dict[system].append(system_info)
 
     return _dict
 
 
-def main():
-    data_path= os.listdir("./original_data/")
-    systemFunctionInfo_map = get_systemFunctionInfo_map(data_path)
+def build_compare_method(args):
+    if args.method=="jieba_set_compare":
+        compare_method = Compare.jieba_set_compare
 
-    with open("./db_data/db.json", 'w') as json_file:
-        json.dump(systemFunctionInfo_map, json_file, ensure_ascii=False)
+    else:
+        compare_method = Compare.SequenceMatcher
 
-
-if __name__ == "__main__":
-    main()
+    return compare_method 
