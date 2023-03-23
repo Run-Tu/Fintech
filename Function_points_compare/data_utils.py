@@ -98,6 +98,8 @@ def get_systemFunctionInfo_map(data_path_lst:list, path:str):
     for data_path in data_path_lst:
         workbook = read_work_book(os.path.join(path, data_path))
         all_system, all_system_info = process_excel_data(workbook)
+        if not all_system or not all_system_info:
+            logger.info()
         for system, system_info in zip(all_system, all_system_info):
             _dict[system].append(system_info)
 

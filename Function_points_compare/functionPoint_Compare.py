@@ -41,7 +41,7 @@ def self_compare(path, compare_method, threshold=0.5):
                         duplicate.append([system, system_info[query_idx], system_info[candidate_idx], score])
 
     self_compare_result = pd.DataFrame(duplicate, columns=["system","system_info","candidate","score"])
-    self_compare_result.to_csv(f"./result/{TODAY}_self_compare.csv",index=False, sep=' ', encoding="UTF-8")
+    self_compare_result.to_csv(f"./result/{path.split('/')[-1]}_self_compare.csv",index=False, sep=' ', encoding="UTF-8")
     logger.info("new excel file self compared successed")
     
 
@@ -91,7 +91,10 @@ def main(args):
         function_map = json.load(json_file, encoding="UTF-8")
     # new excel file self compare
     if args.self_compare:
-        self_compare("./new_excel_file/63【南京银行】2022年框架评估_数据挖掘平台22年四季度付款(天阳）-wuhg-0116(已确认)(1).xlsx", compare_method, args.threshold)
+        new_excel_file_list = os.listdir("./new_excel_file")
+        for new_excel in new_excel_file_list:
+            path = os.path.join("./new_excel_file", new_excel)
+            self_compare(path, compare_method, args.threshold)
     # batch_query_recall()
     logger.info(f"Convert batch_query_recall_result to {TODAY}.csv file ....")
     batch_query_recall_result = batch_query_recall(systemInfo_map=function_map, 
